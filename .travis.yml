@@ -1,0 +1,28 @@
+language: haskell
+dist: bionic
+cabal: "2.4"
+ghc:
+  "8.6.4"
+
+cache:
+  directories:
+  - $HOME/.stack
+
+addons:
+  apt:
+    packages:
+      - libgtk-3-dev
+      - libgirepository1.0-dev
+
+before_install:
+- mkdir -p ~/.local/bin
+- export PATH=$HOME/.local/bin:$PATH
+- travis_retry curl -L https://get.haskellstack.org/stable/linux-x86_64.tar.gz | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+- cabal install happy haskell-gi gi-gtk
+- stack --no-terminal init
+
+install:
+- stack --no-terminal --install-ghc test --only-dependencies
+
+script:
+- stack --no-terminal test --haddock --no-haddock-deps
