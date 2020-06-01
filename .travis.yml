@@ -6,7 +6,8 @@ ghc:
 
 cache:
   directories:
-  - $HOME/.stack
+  - $HOME/.stack/snapshots
+  - $HOME/.cabal/packages
 
 addons:
   apt:

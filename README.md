@@ -1,8 +1,13 @@
 # halyard
+[![Build Status](https://travis-ci.org/patrickp89/halyard.svg?branch=master)](https://travis-ci.org/patrickp89/halyard)
+
 An offline, stand-alone regular expression tester.
 
 ## ...but why?
-If you want to test regular expressions on any sensitive data you might not trust one of those ("popular"?) online RegEx testing tools. Halyard instead runs totally offline, is open-source, and meant to be used stand-alone (i.e. its not a plugin for a browser that you do not use). Its only dependencies are the GTK+ libraries.
+If you want to test regular expressions on any sensitive data you might not trust one of
+those ("popular"?) online RegEx testing tools. Halyard instead runs totally offline, is
+open-source, and meant to be used stand-alone (i.e. its not a plugin for a browser that
+you do not use).
 
 ## How to build it?
 ### Dependencies
