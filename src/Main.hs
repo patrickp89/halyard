@@ -26,18 +26,18 @@ createUiWidgets = do
   #add win vbox
 
   -- create all input fields and their corresponding labels:
-  (buf, resultInfoLabel) <- createInputFieldsAndLabels vbox
+  (textBuffer, regExBuffer, resultInfoLabel) <- createInputFieldsAndLabels vbox
 
   -- a button (TODO: remove later and use an event on the entry level):
   btn <- new Gtk.Button [#label := "Test expression!"]
   #packEnd vbox btn False False 0
-  on btn #clicked (displayMatches buf resultInfoLabel)
+  on btn #clicked (displayMatches textBuffer regExBuffer resultInfoLabel)
   
   -- draw everything:
   #showAll win
 
 
-createInputFieldsAndLabels :: Gtk.Box -> IO (Gtk.TextBuffer, Gtk.Label)
+createInputFieldsAndLabels :: Gtk.Box -> IO (Gtk.TextBuffer, Gtk.EntryBuffer, Gtk.Label)
 createInputFieldsAndLabels vbox = do
   -- an hbox for the top labels (reg ex-label and result infos):
   topRegexHbox <- new Gtk.Box [#orientation := Gtk.OrientationHorizontal]
@@ -48,16 +48,17 @@ createInputFieldsAndLabels vbox = do
   #packStart vbox topRegexHbox False False 0
 
   -- the entry field for the regular expressions (with a placeholder RegEx):
-  regExEntry <- new Gtk.Entry [#placeholderText := "a ([\\S]+) expression$"]
+  regExEntry <- new Gtk.Entry [#placeholderText := "^your [a-z]+ expression$"]
   #packStart vbox regExEntry False False 0
+  regExBuffer <- #getBuffer regExEntry
 
   -- a multi-line input field will collect sample text to match
   -- any RegEx against; first, a text buffer:
-  buf <- new Gtk.TextBuffer []
-  #setText buf "your test text goes here :)" (-1)
+  textBuffer <- new Gtk.TextBuffer []
+  #setText textBuffer "your test text goes here :)" (-1)
 
   -- ...then the actual text view:
-  testStringsTextEntry <- Gtk.textViewNewWithBuffer buf
+  testStringsTextEntry <- Gtk.textViewNewWithBuffer textBuffer
 
   -- this text field should have scrollbars, therefore we create a
   -- new GtkScrolledWindow with a proper scroll-policy:
@@ -68,18 +69,39 @@ createInputFieldsAndLabels vbox = do
   -- and add the scrolled window to our vbox:
   Gtk.containerAdd scrolledWindow testStringsTextEntry
   #packStart vbox scrolledWindow True True 0
-  return (buf, resultInfoLabel)
+
+  -- return the buffers and the label:
+  return (textBuffer, regExBuffer, resultInfoLabel)
 
 
 resultLabelCaption :: Int -> T.Text
 resultLabelCaption i = T.pack ("(" ++ show i ++ " matches)")
 
 
-displayMatches :: Gtk.TextBuffer -> Gtk.Label -> IO ()
-displayMatches buffer label = do
-  startIter <- #getStartIter buffer
-  endIter <- #getEndIter buffer
+displayMatches :: Gtk.TextBuffer -> Gtk.EntryBuffer -> Gtk.Label -> IO ()
+displayMatches textBuffer regExBuffer label = do
+  allLines <- getAllLines textBuffer
+  regEx <- getRegEx regExBuffer
+  allMatchCounts <- computeAllMatchCounts regEx allLines
+  let totalMatchCount = sum allMatchCounts
+  set label [#label := (resultLabelCaption totalMatchCount)]
+
+
+getAllLines :: Gtk.TextBuffer -> IO [String]
+getAllLines buffer = do
+  lc <- #getLineCount buffer
+  mapM (getSingleLine buffer) (take (fromIntegral lc) [0,1..])
+
+
+getSingleLine :: Gtk.TextBuffer -> Int -> IO String
+getSingleLine buffer i = do
+  startIter <- #getIterAtLine buffer (fromIntegral i)
+  endIter <- #getIterAtLine buffer (fromIntegral (i+1))
   bufferText <- #getText buffer startIter endIter False
-  lines <- return (show bufferText) -- TODO: matches the whole text! should be line by line instead!
-  matchCount <- return (computeMatchCount lines "[a-z]+") -- TODO: use the text from the input field
-  set label [#label := (resultLabelCaption matchCount)]
+  return (T.unpack bufferText)
+
+
+getRegEx :: Gtk.EntryBuffer -> IO String
+getRegEx regExBuffer = do
+  regExText <- #getText regExBuffer
+  return (T.unpack regExText)
