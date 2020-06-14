@@ -2,14 +2,16 @@ module RegExUtil where
 
 import Text.Regex.TDFA
 
-computeAllMatchCounts :: String -> [String] -> IO [Int]
-computeAllMatchCounts regEx lines =
+-- Computes all matches for a single line.
+computeMatches :: String -> String -> IO [(MatchOffset, MatchLength)]
+computeMatches regEx line =
   case regEx of
     "" -> return []
-    _  -> mapM (computeMatchCount regEx) lines
+    _  -> computeAllMatchesInLine regEx line
 
 
-computeMatchCount :: String -> String -> IO Int
-computeMatchCount regEx s = do
-  let matches = (getAllTextMatches (s =~ regEx) :: [String])
-  return (length matches)
+-- Returns a list of (offset, length) tuples for all matches in this string.
+computeAllMatchesInLine :: String -> String -> IO [(MatchOffset, MatchLength)]
+computeAllMatchesInLine regEx s = do
+  let matches = getAllMatches (s =~ regEx) :: [(MatchOffset,MatchLength)]
+  return matches

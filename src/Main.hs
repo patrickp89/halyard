@@ -5,6 +5,7 @@ module Main where
 import qualified Data.Text as T
 import qualified GI.Gtk as Gtk
 import Data.GI.Base
+import Text.Regex.TDFA
 import RegExUtil
 
 main :: IO ()
@@ -80,27 +81,56 @@ resultLabelCaption i = T.pack ("(" ++ show i ++ " matches)")
 
 displayMatches :: Gtk.TextBuffer -> Gtk.EntryBuffer -> Gtk.Label -> IO ()
 displayMatches textBuffer regExBuffer label = do
+  -- un-highlight any old matches:
+  -- TODO!
+  -- then compute all new matches and highlight them:
   allLines <- getAllLines textBuffer
   regEx <- getRegEx regExBuffer
-  allMatchCounts <- computeAllMatchCounts regEx allLines
-  let totalMatchCount = sum allMatchCounts
+  highlightedLines <- mapM (computeAndHighlightMatches textBuffer regEx) allLines
+  let totalMatchCount = sum highlightedLines
   set label [#label := (resultLabelCaption totalMatchCount)]
 
 
-getAllLines :: Gtk.TextBuffer -> IO [String]
+-- Highlights all matches in a single line, returns the match count.
+computeAndHighlightMatches :: Gtk.TextBuffer -> String -> (Int, String) -> IO Int
+computeAndHighlightMatches textBuffer regEx (lineNumber, line) = do
+  allMatchesInThisLine <- computeMatches regEx line
+  let matchCount = length allMatchesInThisLine
+  markups <- mapM (highlightSingleMatch textBuffer lineNumber) allMatchesInThisLine
+  return matchCount
+
+
+highlightSingleMatch :: Gtk.TextBuffer -> Int -> (MatchOffset, MatchLength) -> IO T.Text
+highlightSingleMatch textBuffer lineNumber (offset, l) = do
+  -- get the text that should be highlighted, first:
+  startIter <- #getIterAtLineOffset textBuffer (fromIntegral lineNumber) (fromIntegral offset)
+  endIter <- #getIterAtLineOffset textBuffer (fromIntegral lineNumber) (fromIntegral (offset + l))
+  match <- #getText textBuffer startIter endIter False
+  -- delete the old match:
+  #delete textBuffer startIter endIter
+  -- ...and insert the new one with the match-highlight markup:
+  let markup = T.pack ("<span background=\"PaleTurquoise\" >" ++ T.unpack match ++ "</span>")
+  #insertMarkup textBuffer startIter markup (-1)
+  return markup
+
+
+-- Returns a list of (lineNumber, line) for all lines in the buffer.
+getAllLines :: Gtk.TextBuffer -> IO [(Int, String)]
 getAllLines buffer = do
   lc <- #getLineCount buffer
   mapM (getSingleLine buffer) (take (fromIntegral lc) [0,1..])
 
 
-getSingleLine :: Gtk.TextBuffer -> Int -> IO String
-getSingleLine buffer i = do
-  startIter <- #getIterAtLine buffer (fromIntegral i)
-  endIter <- #getIterAtLine buffer (fromIntegral (i+1))
-  bufferText <- #getText buffer startIter endIter False
-  return (T.unpack bufferText)
+-- Extracts the line at lineNumber from the buffer and returns (lineNumber, line).
+getSingleLine :: Gtk.TextBuffer -> Int -> IO (Int, String)
+getSingleLine textBuffer lineNumber = do
+  startIter <- #getIterAtLine textBuffer (fromIntegral lineNumber)
+  endIter <- #getIterAtLine textBuffer (fromIntegral (lineNumber + 1))
+  bufferText <- #getText textBuffer startIter endIter False
+  return (lineNumber, (T.unpack bufferText))
 
 
+-- Extracts the user's regular expression.
 getRegEx :: Gtk.EntryBuffer -> IO String
 getRegEx regExBuffer = do
   regExText <- #getText regExBuffer
