@@ -82,13 +82,23 @@ resultLabelCaption i = T.pack ("(" ++ show i ++ " matches)")
 displayMatches :: Gtk.TextBuffer -> Gtk.EntryBuffer -> Gtk.Label -> IO ()
 displayMatches textBuffer regExBuffer label = do
   -- un-highlight any old matches:
-  -- TODO!
+  removeAllMarkup textBuffer
   -- then compute all new matches and highlight them:
   allLines <- getAllLines textBuffer
-  regEx <- getRegEx regExBuffer
-  highlightedLines <- mapM (computeAndHighlightMatches textBuffer regEx) allLines
-  let totalMatchCount = sum highlightedLines
-  set label [#label := (resultLabelCaption totalMatchCount)]
+  maybeRegEx <- getRegEx regExBuffer
+  case maybeRegEx of
+    Nothing -> set label [#label := (resultLabelCaption 0)]
+    Just regEx -> do
+      highlightedLines <- mapM (computeAndHighlightMatches textBuffer regEx) allLines
+      let totalMatchCount = sum highlightedLines
+      set label [#label := (resultLabelCaption totalMatchCount)]
+
+
+removeAllMarkup :: Gtk.TextBuffer -> IO ()
+removeAllMarkup textBuffer = do
+  startIter <- #getStartIter textBuffer
+  endIter <- #getEndIter textBuffer
+  #removeAllTags textBuffer startIter endIter
 
 
 -- Highlights all matches in a single line, returns the match count.
@@ -110,6 +120,7 @@ highlightSingleMatch textBuffer lineNumber (offset, l) = do
   #delete textBuffer startIter endIter
   -- ...and insert the new one with the match-highlight markup:
   let markup = T.pack ("<span background=\"PaleTurquoise\" >" ++ T.unpack match ++ "</span>")
+  -- TODO: to distinguish between matches that are right next to each other, the color should be alternating!
   #insertMarkup textBuffer startIter markup (-1)
   return markup
 
@@ -130,8 +141,10 @@ getSingleLine textBuffer lineNumber = do
   return (lineNumber, (T.unpack bufferText))
 
 
--- Extracts the user's regular expression.
-getRegEx :: Gtk.EntryBuffer -> IO String
+-- Extracts the user's regular expression and checks whether it is valid..
+getRegEx :: Gtk.EntryBuffer -> IO (Maybe String)
 getRegEx regExBuffer = do
   regExText <- #getText regExBuffer
-  return (T.unpack regExText)
+  let regEx = T.unpack regExText
+  isValid <- checkRegEx regEx
+  if isValid then return (Just regEx) else return Nothing
