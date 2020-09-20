@@ -1,5 +1,5 @@
 # halyard
-[![Build Status](https://travis-ci.org/patrickp89/halyard.svg?branch=master)](https://travis-ci.org/patrickp89/halyard)
+[![Build Status](https://travis-ci.com/patrickp89/halyard.svg?branch=master)](https://travis-ci.com/patrickp89/halyard)
 
 An offline, stand-alone regular expression tester.
 
@@ -20,7 +20,7 @@ $ apt-get install libgtk-3-dev libgirepository1.0-dev
 Install [Cabal](https://www.haskell.org/cabal/) and build it:
 ```bash
 $ curl https://gitlab.haskell.org/haskell/ghcup/raw/master/bootstrap-haskell -sSf | sh
-$ cabal install happy haskell-gi gi-gtk
+$ cabal install happy
 $ cabal build
 ```
 

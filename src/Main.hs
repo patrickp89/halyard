@@ -7,6 +7,7 @@ import qualified GI.Gtk as Gtk
 import Data.GI.Base
 import Text.Regex.TDFA
 import RegExUtil
+import Flow
 
 main :: IO ()
 main = do
@@ -105,13 +106,20 @@ removeAllMarkup textBuffer = do
 computeAndHighlightMatches :: Gtk.TextBuffer -> String -> (Int, String) -> IO Int
 computeAndHighlightMatches textBuffer regEx (lineNumber, line) = do
   allMatchesInThisLine <- computeMatches regEx line
-  let matchCount = length allMatchesInThisLine
-  markups <- mapM (highlightSingleMatch textBuffer lineNumber) allMatchesInThisLine
-  return matchCount
+  -- TODO: If line n has an even match count, the fist match on line n+1 has the
+  -- TODO: the same color as the last one on line n!
+  -- TODO: This might be misleading if they are a at the very end (or beginning
+  -- TODO: respectively) of the line!
+  -- TODO: Use 2 different color schemes, alternating between lines!
+  markups <- allMatchesInThisLine
+        |> zip [0 .. ]
+        |> map (\(i, (offset, l)) -> (offset, l, odd i))
+        |> mapM (highlightSingleMatch textBuffer lineNumber)
+  return (length markups)
 
 
-highlightSingleMatch :: Gtk.TextBuffer -> Int -> (MatchOffset, MatchLength) -> IO T.Text
-highlightSingleMatch textBuffer lineNumber (offset, l) = do
+highlightSingleMatch :: Gtk.TextBuffer -> Int -> (MatchOffset, MatchLength, Bool) -> IO T.Text
+highlightSingleMatch textBuffer lineNumber (offset, l, oddMatch) = do
   -- get the text that should be highlighted, first:
   startIter <- #getIterAtLineOffset textBuffer (fromIntegral lineNumber) (fromIntegral offset)
   endIter <- #getIterAtLineOffset textBuffer (fromIntegral lineNumber) (fromIntegral (offset + l))
@@ -119,8 +127,8 @@ highlightSingleMatch textBuffer lineNumber (offset, l) = do
   -- delete the old match:
   #delete textBuffer startIter endIter
   -- ...and insert the new one with the match-highlight markup:
-  let markup = T.pack ("<span background=\"PaleTurquoise\" >" ++ T.unpack match ++ "</span>")
-  -- TODO: to distinguish between matches that are right next to each other, the color should be alternating!
+  let color = if oddMatch then "PaleTurquoise" else "MistyRose"
+  let markup = T.pack ("<span background=\"" ++ color ++ "\">" ++ T.unpack match ++ "</span>")
   #insertMarkup textBuffer startIter markup (-1)
   return markup
 
