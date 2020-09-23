@@ -22,19 +22,16 @@ createUiWidgets = do
   win <- new Gtk.Window [#title := "halyard - RegEx Tester"]
   on win #destroy Gtk.mainQuit
   #resize win 640 480
-
   -- and a vbox:
   vbox <- new Gtk.Box [#orientation := Gtk.OrientationVertical]
   #add win vbox
 
   -- create all input fields and their corresponding labels:
   (textBuffer, regExBuffer, resultInfoLabel) <- createInputFieldsAndLabels vbox
-
   -- a button (TODO: remove later and use an event on the entry level):
   btn <- new Gtk.Button [#label := "Test expression!"]
   #packEnd vbox btn False False 0
   on btn #clicked (displayMatches textBuffer regExBuffer resultInfoLabel)
-  
   -- draw everything:
   #showAll win
 
@@ -58,7 +55,6 @@ createInputFieldsAndLabels vbox = do
   -- any RegEx against; first, a text buffer:
   textBuffer <- new Gtk.TextBuffer []
   #setText textBuffer "your test text goes here :)" (-1)
-
   -- ...then the actual text view:
   testStringsTextEntry <- Gtk.textViewNewWithBuffer textBuffer
 
@@ -71,7 +67,6 @@ createInputFieldsAndLabels vbox = do
   -- and add the scrolled window to our vbox:
   Gtk.containerAdd scrolledWindow testStringsTextEntry
   #packStart vbox scrolledWindow True True 0
-
   -- return the buffers and the label:
   return (textBuffer, regExBuffer, resultInfoLabel)
 
@@ -106,16 +101,18 @@ removeAllMarkup textBuffer = do
 computeAndHighlightMatches :: Gtk.TextBuffer -> String -> (Int, String) -> IO Int
 computeAndHighlightMatches textBuffer regEx (lineNumber, line) = do
   allMatchesInThisLine <- computeMatches regEx line
-  -- TODO: If line n has an even match count, the fist match on line n+1 has the
-  -- TODO: the same color as the last one on line n!
-  -- TODO: This might be misleading if they are a at the very end (or beginning
-  -- TODO: respectively) of the line!
-  -- TODO: Use 2 different color schemes, alternating between lines!
   markups <- allMatchesInThisLine
         |> zip [0 .. ]
         |> map (\(i, (offset, l)) -> (offset, l, odd i))
         |> mapM (highlightSingleMatch textBuffer lineNumber)
   return (length markups)
+
+
+pickMatchColor :: (Bool, Bool) -> String
+pickMatchColor (True, False)  = "PaleTurquoise"
+pickMatchColor (True, True)   = "MistyRose"
+pickMatchColor (False, False) = "Aquamarine"
+pickMatchColor (False, True)  = "Lavender"
 
 
 highlightSingleMatch :: Gtk.TextBuffer -> Int -> (MatchOffset, MatchLength, Bool) -> IO T.Text
@@ -127,7 +124,8 @@ highlightSingleMatch textBuffer lineNumber (offset, l, oddMatch) = do
   -- delete the old match:
   #delete textBuffer startIter endIter
   -- ...and insert the new one with the match-highlight markup:
-  let color = if oddMatch then "PaleTurquoise" else "MistyRose"
+  let oddLine = odd lineNumber
+  let color = pickMatchColor (oddLine, oddMatch)
   let markup = T.pack ("<span background=\"" ++ color ++ "\">" ++ T.unpack match ++ "</span>")
   #insertMarkup textBuffer startIter markup (-1)
   return markup

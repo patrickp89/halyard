@@ -1,5 +1,5 @@
 name:                halyard
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            An offline stand-alone RegEx tester
 description:         A tool to test your regular expressions against sample input,
                      running offline and therefore being a nice substitute for any
@@ -23,13 +23,14 @@ source-repository head
 
 executable halyard
   main-is:             Main.hs
-  build-depends:       base >=4.11.1 && <4.14,
-                       haskell-gi-base >= 0.8 && <= 0.23.0,
-                       gi-gtk >= 3.0.2 && <= 3.0.32,
-                       regex-tdfa >= 0.92 && <= 1.3.1.0,
+  build-depends:       base >=4.11.1 && <=4.13.0.0,
+                       -- haskell-gi-base 0.24.2 requires hsc2hs >= 0.68.6,
+                       -- but Cabal 2.4 (a Travis.com constraint) only provides 0.68.5!
+                       haskell-gi-base <= 0.23.0,
+                       gi-gtk >= 3.0.32 && <= 3.0.36,
+                       regex-tdfa <= 1.3.1.0,
                        text >= 1.2.3.1 && <= 1.2.4.0,
-                       flow >= 1.0.0 && <= 1.0.21
+                       flow <= 1.0.21
   hs-source-dirs:      src
   other-modules:       RegExUtil
   default-language:    Haskell2010
-

@@ -20,7 +20,7 @@ $ apt-get install libgtk-3-dev libgirepository1.0-dev
 Install [Cabal](https://www.haskell.org/cabal/) and build it:
 ```bash
 $ curl https://gitlab.haskell.org/haskell/ghcup/raw/master/bootstrap-haskell -sSf | sh
-$ cabal v2-install happy
+$ cabal v2-install hsc2hs
 $ cabal v2-build
 ```
 

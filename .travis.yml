@@ -25,7 +25,7 @@ before_install:
   - ghc --version
 
 install:
-  - cabal v2-install happy
+  - cabal v2-install hsc2hs
 
 script:
   - cabal v2-build
